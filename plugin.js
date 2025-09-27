@@ -1,5 +1,18 @@
+/********************
+ * Plugin Comprovante Kinbox (sem usar customFields)
+ ********************/
+
+function logMsg(msg, obj) {
+    console.log(msg, obj || "")
+    const logDiv = document.getElementById("log")
+    if (logDiv) {
+        logDiv.innerHTML += "\n" + msg + (obj ? " " + JSON.stringify(obj, null, 2) : "")
+        logDiv.scrollTop = logDiv.scrollHeight
+    }
+}
+
 Kinbox.on("conversation", function (data) {
-    console.log("📩 Nova conversa recebida:", data)
+    logMsg("📩 Nova conversa recebida:", { contato: data.contact?.name, conversa: data.conversation?.id })
 
     const ultimaMensagem = data?.conversation?.lastMessage
 
@@ -8,28 +21,21 @@ Kinbox.on("conversation", function (data) {
         return
     }
 
-    // Extrair texto se for mensagem de texto (Delta formatado)
-    let textoMensagem = null
-    if (ultimaMensagem.type === 1 && ultimaMensagem.content) {
-        try {
-            const parsed = JSON.parse(ultimaMensagem.content)
-            textoMensagem = parsed.map(item => item.insert).join("") || null
-        } catch (err) {
-            textoMensagem = ultimaMensagem.content
-        }
-    }
+    logMsg("💬 Última mensagem →", ultimaMensagem)
 
-    logMsg(`💬 Última mensagem → Tipo: ${ultimaMensagem.type} | Conteúdo: ${textoMensagem || "[sem texto]"}`)
+    // Só segue se for imagem ou documento
+    const tipo = ultimaMensagem.type
+    const ehComprovante = (tipo === "image" || tipo === "document" || ultimaMensagem.isMedia)
 
-    // Só processa se for mídia (imagem/documento)
-    if (!(ultimaMensagem.isMedia || ultimaMensagem.type !== 1)) {
-        logMsg("⛔ Ignorado: não é mídia nem documento.")
+    if (!ehComprovante) {
+        logMsg("⛔ Ignorado: última mensagem não é imagem/documento.")
         return
     }
 
-    logMsg("🖼️ Mensagem é mídia/documento. Verificando tags...")
+    // Verifica se tem a tag aguardando_comprovante
+    const temTag = (data.conversation?.tags || []).some(tag => tag.name === "aguardando_comprovante" || tag.id === "aguardando_comprovante")
 
-    if (!data.conversation?.tags?.includes("aguardando_comprovante")) {
+    if (!temTag) {
         logMsg("🚫 Contato sem a tag 'aguardando_comprovante'.")
         return
     }
@@ -39,33 +45,34 @@ Kinbox.on("conversation", function (data) {
     const payload = {
         token: "ak_live_NjEvp8gn2YAax4q11bzCq7yi0LyFX5vPXPAtcEV_DglI3fSoYk",
         contato: {
-            id: data.conversation?.contact?.id,
-            nome: data.conversation?.contact?.name,
-            telefone: data.conversation?.contact?.phone
+            id: data.contact?.id,
+            nome: data.contact?.name,
+            telefone: data.contact?.phone
         },
         mensagem: {
-            id: ultimaMensagem._id,
-            texto: textoMensagem,
-            tipo: ultimaMensagem.type,
-            midia: ultimaMensagem.fileName || null
+            id: ultimaMensagem._id || ultimaMensagem.idMessage,
+            tipo,
+            texto: ultimaMensagem.type === 1 ? ultimaMensagem.content : null,
+            arquivo: ultimaMensagem.fileName || null,
+            url: ultimaMensagem.url || null
         },
         metadata: {
-            tags: data.conversation?.tags || [],
-            campanha: data.conversation?.campaign || null
+            conversaId: data.conversation?.id,
+            tags: data.conversation?.tags || []
         }
     }
 
-    logMsg("📤 Enviando payload para o n8n...")
+    logMsg("📤 Enviando payload para n8n...", payload)
 
     fetch("https://n8n.srv1025988.hstgr.cloud/webhook/kinbox/comprovantes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
     })
-        .then((res) => {
-            logMsg("🎯 Payload enviado com sucesso. Status: " + res.status)
-        })
-        .catch((err) => {
-            logMsg("❌ Erro ao enviar para o n8n: " + err.message)
-        })
+        .then(res => logMsg("🎯 Payload enviado com sucesso. Status: " + res.status))
+        .catch(err => logMsg("❌ Erro ao enviar para o n8n: " + err.message))
+})
+
+Kinbox.on("no_conversation", function () {
+    logMsg("ℹ️ Nenhuma conversa ativa.")
 })
