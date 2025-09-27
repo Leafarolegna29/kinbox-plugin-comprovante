@@ -36,54 +36,22 @@
     <h2>📡 Plugin de Captura de Comprovantes</h2>
     <div id="log">Iniciando plugin...</div>
 
-    <!-- Carrega o plugin -->
+    <!-- Define logMsg antes do plugin -->
     <script type="text/javascript">
       function logMsg(msg, obj) {
         console.log(msg, obj || "")
         const logDiv = document.getElementById("log")
         if (logDiv) {
-          logDiv.innerHTML += "\n" + msg + (obj ? " " + JSON.stringify(obj, null, 2) : "")
+          logDiv.innerHTML +=
+            "\n" +
+            msg +
+            (obj ? " " + JSON.stringify(obj, null, 2) : "")
           logDiv.scrollTop = logDiv.scrollHeight
         }
       }
-
-      // Escuta o evento do Kinbox
-      Kinbox.on("conversation", function (data) {
-        logMsg("📩 Nova conversa recebida:", { contato: data.contact?.name, conversa: data.conversation?.id })
-
-        const conversaId = data.conversation?.id
-        if (!conversaId) {
-          logMsg("⚠️ Nenhum ID de conversa encontrado.")
-          return
-        }
-
-        const payload = {
-          token: "ak_live_NjEvp8gn2YAax4q11bzCq7yi0LyFX5vPXPAtcEV_DglI3fSoYk",
-          contato: {
-            id: data.contact?.id,
-            nome: data.contact?.name,
-            telefone: data.contact?.phone
-          },
-          metadata: {
-            conversaId,
-            tags: data.conversation?.tags || []
-          }
-        }
-
-        logMsg("📤 Enviando ID da conversa para n8n...", payload)
-
-        fetch("https://n8n.srv1025988.hstgr.cloud/webhook/kinbox/comprovantes", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        })
-          .then(res => logMsg("🎯 Payload enviado com sucesso. Status: " + res.status))
-          .catch(err => logMsg("❌ Erro ao enviar para o n8n: " + err.message))
-      })
-
-      Kinbox.on("no_conversation", function () {
-        logMsg("ℹ️ Nenhuma conversa ativa.")
-      })
     </script>
+
+    <!-- Importa o plugin -->
+    <script type="text/javascript" src="plugin.js"></script>
   </body>
 </html>
