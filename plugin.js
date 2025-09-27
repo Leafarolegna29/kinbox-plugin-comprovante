@@ -1,3 +1,8 @@
+// Mapa fixo das tags conhecidas
+const TAGS_MAP = {
+  "41591": "Aguardando comprovante"
+}
+
 Kinbox.on("conversation", function (data) {
   logMsg("📩 Nova conversa recebida:", {
     contato: data.contact?.name,
@@ -7,11 +12,12 @@ Kinbox.on("conversation", function (data) {
   const conversaId = data.conversation?.id
   const tags = data.conversation?.tags || []
 
-  logMsg("🏷️ Tags recebidas:", tags)
+  logMsg("🏷️ Tags recebidas (cruas):", tags)
 
-  // Dispara se tiver alguma tag com "comprovante"
+  // Verificação de tags usando ID + nome do mapa
   const temTagComprovante = tags.some(t => {
-    const nome = String(t.name || "").toLowerCase()
+    const tagId = String(t.id || t) // pode vir como objeto ou id direto
+    const nome = (t.name || TAGS_MAP[tagId] || "").toLowerCase()
     return nome.includes("comprovante")
   })
 
@@ -27,15 +33,36 @@ Kinbox.on("conversation", function (data) {
   }
 
   let mediaUrl = null
+  let mensagemTexto = null
 
+  // 1) tenta pelo content
   try {
-    const parsed = JSON.parse(ultimaMensagem.content)
-    const insert = parsed[0]?.insert
-    if (insert?.image) mediaUrl = insert.image
-    if (insert?.document) mediaUrl = insert.document
-    if (insert?.audio) mediaUrl = insert.audio
+    if (ultimaMensagem.content) {
+      const parsed = JSON.parse(ultimaMensagem.content)
+      const insert = parsed[0]?.insert
+      if (insert?.image) mediaUrl = insert.image
+      if (insert?.document) mediaUrl = insert.document
+      if (insert?.audio) mediaUrl = insert.audio
+      if (typeof insert === "string") mensagemTexto = insert
+    }
   } catch (e) {
-    logMsg("❌ Erro ao tentar ler conteúdo da mensagem: " + e.message)
+    logMsg("❌ Erro ao tentar ler content: " + e.message)
+  }
+
+  // 2) fallback pelo campo direto
+  if (!mediaUrl && ultimaMensagem.mediaUrl) {
+    mediaUrl = ultimaMensagem.mediaUrl
+  }
+
+  // 3) fallback pelo campo extra
+  if (!mediaUrl && ultimaMensagem.extra?.mediaUrl) {
+    mediaUrl = ultimaMensagem.extra.mediaUrl
+  }
+
+  if (mediaUrl) {
+    logMsg("✅ Comprovante detectado: " + mediaUrl, null, true)
+  } else {
+    logMsg("⚠️ Nenhum comprovante (mídia) detectado nesta mensagem.")
   }
 
   const payload = {
@@ -53,10 +80,11 @@ Kinbox.on("conversation", function (data) {
       ctwa_clid: data.conversation?.referral || null,
       tags,
       comprovante: mediaUrl,
+      mensagemTexto
     },
   }
 
-  logMsg("📤 Enviando comprovante e dados extras para n8n...", payload)
+  logMsg("📤 Enviando payload para n8n...", payload)
 
   fetch("https://n8n.srv1025988.hstgr.cloud/webhook/kinbox/comprovantes", {
     method: "POST",
