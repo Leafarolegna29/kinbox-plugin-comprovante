@@ -1,15 +1,19 @@
 Kinbox.on("conversation", function (data) {
   logMsg("📩 Nova conversa recebida:", {
     contato: data.contact?.name,
-    conversa: data.conversation?.id,
-    ultimaMensagem: data.conversation?.lastMessage || "⚠️ Sem mensagem"
+    conversa: data.conversation?.id
   })
 
   const conversaId = data.conversation?.id
   const tags = data.conversation?.tags || []
 
-  // só dispara se tiver a tag comprovante
-  const temTagComprovante = tags.some(t => String(t.name || "").toLowerCase().includes("comprovante"))
+  logMsg("🏷️ Tags recebidas:", tags)
+
+  // Dispara se tiver alguma tag com "comprovante"
+  const temTagComprovante = tags.some(t => {
+    const nome = String(t.name || "").toLowerCase()
+    return nome.includes("comprovante")
+  })
 
   if (!temTagComprovante) {
     logMsg("ℹ️ Nenhuma tag de comprovante encontrada.")
