@@ -1,42 +1,20 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Plugin Comprovante Kinbox</title>
+Kinbox.on("conversation", function (data) {
+    logMsg("📩 Nova conversa recebida:", { contato: data.contact?.name, conversa: data.conversation?.id })
 
-    <!-- SDK do Kinbox -->
-    <script
-      type="text/javascript"
-      src="https://andrody.github.io/kinbox-lib/kinboxjs.js"
-    ></script>
+    // Dump só da conversa
+    console.log("🛠 Dump de data.conversation:", data.conversation)
+    logMsg("🛠 Veja o console do navegador (F12 → Console) para a estrutura completa da conversa.")
 
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        background: #111;
-        color: #0f0;
-        padding: 10px;
-      }
-      h2 {
-        color: #0ff;
-      }
-      #log {
-        white-space: pre-wrap;
-        font-size: 14px;
-        line-height: 1.4em;
-        background: #000;
-        padding: 10px;
-        border-radius: 8px;
-        max-height: 500px;
-        overflow-y: auto;
-      }
-    </style>
-  </head>
-  <body>
-    <h2>📡 Plugin de Captura de Comprovantes</h2>
-    <div id="log">Iniciando plugin...</div>
+    // Tenta pegar mensagens se existirem
+    if (data.conversation?.messages) {
+        logMsg("📌 Existe array conversation.messages com tamanho: " + data.conversation.messages.length)
+    }
 
-    <!-- Carregar plugin.js por último -->
-    <script type="text/javascript" src="plugin.js"></script>
-  </body>
-</html>
+    if (data.session?.messages) {
+        logMsg("📌 Existe array session.messages com tamanho: " + data.session.messages.length)
+    }
+
+    if (data.contact?.messages) {
+        logMsg("📌 Existe array contact.messages com tamanho: " + data.contact.messages.length)
+    }
+})
