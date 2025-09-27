@@ -1,47 +1,54 @@
 /********************
- * Plugin Comprovante Kinbox (com debug no console e sendNote)
+ * Plugin Comprovante Kinbox (com debug no console, notas e tela)
  ********************/
 
 var conversation
 
-// Escuta eventos de nova conversa
+// Função para logar no console visual
+function logMsg(msg) {
+    console.log(msg)
+    const logDiv = document.getElementById("log")
+    if (logDiv) {
+        logDiv.innerHTML += "\n" + msg
+        logDiv.scrollTop = logDiv.scrollHeight
+    }
+}
+
+// Quando chega nova conversa
 Kinbox.on("conversation", function (data) {
     conversation = data
-    console.log("📩 [PLUGIN] Nova conversa recebida:", data)
-
+    logMsg("📩 Nova conversa recebida do contato: " + (data.contact?.name || "sem nome"))
     Kinbox.sendNote("📩 Nova conversa recebida do contato: " + (data.contact?.name || "sem nome"))
 
     const ultimaMensagem = data?.messages?.[0]
 
     if (!ultimaMensagem) {
-        console.log("⚠️ [PLUGIN] Nenhuma mensagem encontrada.")
+        logMsg("⚠️ Nenhuma mensagem encontrada.")
         Kinbox.sendNote("⚠️ Nenhuma mensagem encontrada na conversa.")
         return
     }
 
-    console.log("💬 [PLUGIN] Última mensagem:", ultimaMensagem)
+    logMsg("💬 Última mensagem → Tipo: " + ultimaMensagem.type)
     Kinbox.sendNote("💬 Última mensagem → Tipo: " + ultimaMensagem.type)
 
-    // Checa se é imagem/documento
-    const ehComprovante = ultimaMensagem.type === "image" || ultimaMensagem.type === "document"
-
-    if (!ehComprovante) {
-        console.log("⛔ [PLUGIN] Ignorado, não é imagem/documento.")
+    // Só aceita imagens ou documentos
+    if (!(ultimaMensagem.type === "image" || ultimaMensagem.type === "document")) {
+        logMsg("⛔ Ignorado: não é imagem nem documento.")
         Kinbox.sendNote("⛔ Ignorado: não é imagem nem documento.")
         return
     }
 
-    console.log("🖼️ [PLUGIN] Mensagem é imagem/documento, verificando tags...")
+    logMsg("🖼️ Mensagem é imagem/documento. Verificando tags...")
     Kinbox.sendNote("🖼️ Mensagem é imagem/documento. Verificando tags...")
 
-    // Checa se tem a tag aguardando_comprovante
+    // Só continua se tiver a tag aguardando_comprovante
     if (!data.contact?.tags?.includes("aguardando_comprovante")) {
-        console.log("🚫 [PLUGIN] Contato sem a tag aguardando_comprovante.")
+        logMsg("🚫 Contato sem a tag 'aguardando_comprovante'.")
         Kinbox.sendNote("🚫 Contato sem a tag 'aguardando_comprovante'.")
         return
     }
 
-    console.log("✅ [PLUGIN] Tag correta encontrada. Preparando payload...")
+    logMsg("✅ Tag encontrada. Preparando payload...")
     Kinbox.sendNote("✅ Tag 'aguardando_comprovante' encontrada. Preparando envio...")
 
     const payload = {
@@ -63,7 +70,7 @@ Kinbox.on("conversation", function (data) {
         }
     }
 
-    console.log("📤 [PLUGIN] Enviando payload para n8n:", payload)
+    logMsg("📤 Enviando payload para o n8n...")
     Kinbox.sendNote("📤 Enviando payload para o n8n...")
 
     fetch("https://n8n.srv1025988.hstgr.cloud/webhook/kinbox/comprovantes", {
@@ -72,11 +79,11 @@ Kinbox.on("conversation", function (data) {
         body: JSON.stringify(payload)
     })
         .then((res) => {
-            console.log("🎯 [PLUGIN] Envio concluído:", res.status)
-            Kinbox.sendNote("🎯 Payload enviado com sucesso ao n8n. Status: " + res.status)
+            logMsg("🎯 Payload enviado com sucesso. Status: " + res.status)
+            Kinbox.sendNote("🎯 Payload enviado com sucesso. Status: " + res.status)
         })
         .catch((err) => {
-            console.error("❌ [PLUGIN] Erro ao enviar:", err)
+            logMsg("❌ Erro ao enviar para o n8n: " + err.message)
             Kinbox.sendNote("❌ Erro ao enviar para o n8n: " + err.message)
         })
 })
@@ -84,6 +91,6 @@ Kinbox.on("conversation", function (data) {
 // Quando não há conversa ativa
 Kinbox.on("no_conversation", function () {
     conversation = null
-    console.log("ℹ️ [PLUGIN] Nenhuma conversa ativa.")
+    logMsg("ℹ️ Nenhuma conversa ativa.")
     Kinbox.sendNote("ℹ️ Nenhuma conversa ativa no momento.")
 })
