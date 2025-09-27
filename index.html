@@ -30,6 +30,10 @@
         max-height: 500px;
         overflow-y: auto;
       }
+      .success {
+        color: #00ff7f;
+        font-weight: bold;
+      }
     </style>
   </head>
   <body>
@@ -38,14 +42,14 @@
 
     <!-- Função global de log -->
     <script type="text/javascript">
-      function logMsg(msg, obj) {
+      function logMsg(msg, obj, success = false) {
         console.log(msg, obj || "")
         const logDiv = document.getElementById("log")
         if (logDiv) {
-          logDiv.innerHTML +=
-            "\n" +
-            msg +
-            (obj ? " " + JSON.stringify(obj, null, 2) : "")
+          const span = document.createElement("div")
+          span.innerText = msg + (obj ? " " + JSON.stringify(obj, null, 2) : "")
+          if (success) span.classList.add("success")
+          logDiv.appendChild(span)
           logDiv.scrollTop = logDiv.scrollHeight
         }
       }
