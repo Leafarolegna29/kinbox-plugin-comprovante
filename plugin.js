@@ -1,5 +1,5 @@
 /********************
- * Plugin Comprovante Kinbox (corrigido e estável)
+ * Plugin Comprovante Kinbox (corrigido com lastMessage)
  ********************/
 
 var conversation
@@ -19,14 +19,14 @@ Kinbox.on("conversation", function (data) {
     conversation = data
     logMsg("📩 Nova conversa recebida do contato: " + (data.contact?.name || "sem nome"))
 
-    const ultimaMensagem = data?.messages?.[0]
+    const ultimaMensagem = data?.conversation?.lastMessage
 
     if (!ultimaMensagem) {
-        logMsg("⚠️ Nenhuma mensagem encontrada.")
+        logMsg("⚠️ Nenhuma mensagem encontrada em conversation.lastMessage.")
         return
     }
 
-    logMsg("💬 Última mensagem → Tipo: " + ultimaMensagem.type)
+    logMsg("💬 Última mensagem → Tipo: " + ultimaMensagem.type + " | Conteúdo: " + (ultimaMensagem.text || "[sem texto]"))
 
     // Só aceita imagens ou documentos
     if (!(ultimaMensagem.type === "image" || ultimaMensagem.type === "document")) {
