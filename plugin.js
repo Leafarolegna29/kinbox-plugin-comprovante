@@ -1,8 +1,8 @@
 /********************
- * Plugin Comprovante Kinbox (sem customFields, corrigido)
+ * Plugin Comprovante Kinbox (corrigido: logMsg definido no topo)
  ********************/
 
-// Função global de log (tem que estar no topo!)
+// Função global de log
 function logMsg(msg, obj) {
     console.log(msg, obj || "")
     const logDiv = document.getElementById("log")
@@ -12,6 +12,7 @@ function logMsg(msg, obj) {
     }
 }
 
+// Evento de conversa
 Kinbox.on("conversation", function (data) {
     logMsg("📩 Nova conversa recebida:", { contato: data.contact?.name, conversa: data.conversation?.id })
 
@@ -76,6 +77,7 @@ Kinbox.on("conversation", function (data) {
         .catch(err => logMsg("❌ Erro ao enviar para o n8n: " + err.message))
 })
 
+// Evento sem conversa ativa
 Kinbox.on("no_conversation", function () {
     logMsg("ℹ️ Nenhuma conversa ativa.")
 })
