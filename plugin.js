@@ -1,45 +1,51 @@
 /********************
- * Plugin Comprovante Kinbox (com debug)
+ * Plugin Comprovante Kinbox (com debug no console e sendNote)
  ********************/
 
 var conversation
 
-// Quando uma conversa é recebida
+// Escuta eventos de nova conversa
 Kinbox.on("conversation", function (data) {
     conversation = data
-    console.log("Nova conversa recebida:", data)
+    console.log("📩 [PLUGIN] Nova conversa recebida:", data)
 
     Kinbox.sendNote("📩 Nova conversa recebida do contato: " + (data.contact?.name || "sem nome"))
 
     const ultimaMensagem = data?.messages?.[0]
 
     if (!ultimaMensagem) {
+        console.log("⚠️ [PLUGIN] Nenhuma mensagem encontrada.")
         Kinbox.sendNote("⚠️ Nenhuma mensagem encontrada na conversa.")
         return
     }
 
-    Kinbox.sendNote("💬 Última mensagem recebida → Tipo: " + ultimaMensagem.type)
+    console.log("💬 [PLUGIN] Última mensagem:", ultimaMensagem)
+    Kinbox.sendNote("💬 Última mensagem → Tipo: " + ultimaMensagem.type)
 
-    // Checa se a mensagem é imagem ou documento
+    // Checa se é imagem/documento
     const ehComprovante = ultimaMensagem.type === "image" || ultimaMensagem.type === "document"
 
     if (!ehComprovante) {
+        console.log("⛔ [PLUGIN] Ignorado, não é imagem/documento.")
         Kinbox.sendNote("⛔ Ignorado: não é imagem nem documento.")
         return
     }
 
-    Kinbox.sendNote("🖼️ Mensagem é imagem/documento. Verificando tags do contato...")
+    console.log("🖼️ [PLUGIN] Mensagem é imagem/documento, verificando tags...")
+    Kinbox.sendNote("🖼️ Mensagem é imagem/documento. Verificando tags...")
 
-    // Checa se o contato tem a tag "aguardando_comprovante"
+    // Checa se tem a tag aguardando_comprovante
     if (!data.contact?.tags?.includes("aguardando_comprovante")) {
-        Kinbox.sendNote("🚫 Contato sem a tag 'aguardando_comprovante'. Não será enviado para o n8n.")
+        console.log("🚫 [PLUGIN] Contato sem a tag aguardando_comprovante.")
+        Kinbox.sendNote("🚫 Contato sem a tag 'aguardando_comprovante'.")
         return
     }
 
-    Kinbox.sendNote("✅ Contato possui a tag 'aguardando_comprovante'. Preparando payload...")
+    console.log("✅ [PLUGIN] Tag correta encontrada. Preparando payload...")
+    Kinbox.sendNote("✅ Tag 'aguardando_comprovante' encontrada. Preparando envio...")
 
     const payload = {
-        token: "ak_live_NjEvp8gn2YAax4q11bzCq7yi0LyFX5vPXPAtcEV_DglI3fSoYk", // 🔑 Substitua pelo token do seu ambiente Kinbox
+        token: "ak_live_NjEvp8gn2YAax4q11bzCq7yi0LyFX5vPXPAtcEV_DglI3fSoYk",
         contato: {
             id: data.contact?.id,
             nome: data.contact?.name,
@@ -57,24 +63,27 @@ Kinbox.on("conversation", function (data) {
         }
     }
 
-    Kinbox.sendNote("📤 Enviando payload para o n8n: " + JSON.stringify(payload))
+    console.log("📤 [PLUGIN] Enviando payload para n8n:", payload)
+    Kinbox.sendNote("📤 Enviando payload para o n8n...")
 
     fetch("https://n8n.srv1025988.hstgr.cloud/webhook/kinbox/comprovantes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
     })
-        .then(() => {
-            Kinbox.sendNote("🎯 Payload enviado com sucesso ao n8n.")
+        .then((res) => {
+            console.log("🎯 [PLUGIN] Envio concluído:", res.status)
+            Kinbox.sendNote("🎯 Payload enviado com sucesso ao n8n. Status: " + res.status)
         })
         .catch((err) => {
+            console.error("❌ [PLUGIN] Erro ao enviar:", err)
             Kinbox.sendNote("❌ Erro ao enviar para o n8n: " + err.message)
-            console.error("Erro ao enviar para n8n:", err)
         })
 })
 
-// Caso não tenha conversa ativa
+// Quando não há conversa ativa
 Kinbox.on("no_conversation", function () {
     conversation = null
+    console.log("ℹ️ [PLUGIN] Nenhuma conversa ativa.")
     Kinbox.sendNote("ℹ️ Nenhuma conversa ativa no momento.")
 })
