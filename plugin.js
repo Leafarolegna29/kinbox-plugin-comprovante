@@ -1,25 +1,11 @@
-/********************
- * Plugin Debug - Mostra todo o objeto recebido
- ********************/
+Kinbox.on("conversation", function (data) {
+    console.log("📩 Dump completo do objeto recebido:", data)
 
-function logMsg(msg, obj) {
-    console.log(msg, obj || "")
+    // Mostra no painel do plugin (limitando tamanho)
     const logDiv = document.getElementById("log")
     if (logDiv) {
-        logDiv.innerHTML += "\n" + msg + (obj ? " " + JSON.stringify(obj, null, 2) : "")
-        logDiv.scrollTop = logDiv.scrollHeight
+        logDiv.innerHTML = "📩 Nova conversa recebida\n\n" +
+            JSON.stringify(data, null, 2).slice(0, 5000) + 
+            "\n\n⚠️ (Exibindo só os primeiros 5000 caracteres)"
     }
-}
-
-// Escuta eventos de conversa
-Kinbox.on("conversation", function (data) {
-    logMsg("📩 Nova conversa recebida:", data)
-
-    // Dump completo para descobrir onde estão as mensagens
-    logMsg("🛠 Estrutura completa recebida → veja no console do Chrome também:", data)
-})
-
-// Escuta quando não há conversa
-Kinbox.on("no_conversation", function () {
-    logMsg("ℹ️ Nenhuma conversa ativa.")
 })
