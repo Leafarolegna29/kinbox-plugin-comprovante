@@ -1,7 +1,8 @@
 /********************
- * Plugin Comprovante Kinbox (sem usar customFields)
+ * Plugin Comprovante Kinbox (sem customFields, corrigido)
  ********************/
 
+// Função global de log (tem que estar no topo!)
 function logMsg(msg, obj) {
     console.log(msg, obj || "")
     const logDiv = document.getElementById("log")
@@ -33,7 +34,9 @@ Kinbox.on("conversation", function (data) {
     }
 
     // Verifica se tem a tag aguardando_comprovante
-    const temTag = (data.conversation?.tags || []).some(tag => tag.name === "aguardando_comprovante" || tag.id === "aguardando_comprovante")
+    const temTag = (data.conversation?.tags || []).some(tag =>
+        tag.name === "aguardando_comprovante" || tag.id === "aguardando_comprovante"
+    )
 
     if (!temTag) {
         logMsg("🚫 Contato sem a tag 'aguardando_comprovante'.")
