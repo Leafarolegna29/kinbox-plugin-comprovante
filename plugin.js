@@ -1,83 +1,9 @@
-/********************
- * Plugin Captura Comprovantes (via API Get Session)
- ********************/
-
-function logMsg(msg, obj) {
-    console.log(msg, obj || "")
-    const logDiv = document.getElementById("log")
-    if (logDiv) {
-        logDiv.innerHTML += "\n" + msg + (obj ? " " + JSON.stringify(obj, null, 2) : "")
-        logDiv.scrollTop = logDiv.scrollHeight
-    }
-}
-
-// Função auxiliar para buscar a última mensagem de uma sessão
-async function getUltimaMensagem(conversationId) {
-    try {
-        const res = await fetch(`https://api.kinbox.com.br/v2/sessions/${conversationId}`, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjM1ODA0IiwiaXNPd25lciI6dHJ1ZSwicm9sZUlkIjpudWxsLCJ2ZXJzaW9uIjpudWxsLCJzZXNzaW9uSWQiOiIzNTgwNC0xNzU4NzE3NTYxNzY2Iiwid29ya3NwYWNlSWQiOiI1MjE3IiwidmVyaWZpY2F0aW9uTGV2ZWwiOjIsImlzQWN0aXZlIjp0cnVlLCJ0eXBlIjowLCJpc01vYmlsZSI6ZmFsc2UsImlhdCI6MTc1ODcxNzU2MSwiZXhwIjoxNzkwMjUzNTYxfQ.l3-8ckeXY3GNBRAhdTM2icCgpH7O9f9IYKz1PMFnpQc"
-            }
-        })
-        const data = await res.json()
-        const mensagens = data?.messages || []
-        return mensagens.length ? mensagens[mensagens.length - 1] : null
-    } catch (err) {
-        logMsg("❌ Erro ao buscar sessão:", err.message)
-        return null
-    }
-}
-
-// Evento principal do plugin
-Kinbox.on("conversation", async function (data) {
+Kinbox.on("conversation", function (data) {
     logMsg("📩 Nova conversa recebida:", { contato: data.contact?.name, conversa: data.conversation?.id })
 
     const conversaId = data.conversation?.id
     if (!conversaId) {
         logMsg("⚠️ Nenhum ID de conversa encontrado.")
-        return
-    }
-
-    const ultimaMensagem = await getUltimaMensagem(conversaId)
-    if (!ultimaMensagem) {
-        logMsg("⚠️ Nenhuma mensagem encontrada na API.")
-        return
-    }
-
-    logMsg("💬 Última mensagem:", ultimaMensagem)
-
-    // Verifica se é mídia/documento
-    const ehComprovante = ultimaMensagem.isMedia || ultimaMensagem.type !== 1
-    if (!ehComprovante) {
-        logMsg("⛔ Ignorado: não é mídia/documento.")
-        return
-    }
-
-    // Verifica se a conversa tem a tag aguardando_comprovante
-    const temTag = (data.conversation?.tags || []).some(tag =>
-        tag.name === "aguardando_comprovante" || tag.id === "aguardando_comprovante"
-    )
-    if (!temTag) {
-        logMsg("🚫 Contato sem a tag 'aguardando_comprovante'.")
-        return
-    }
-
-    // Extrair URL do comprovante do content (Delta)
-    let urlArquivo = null
-    try {
-        const parsed = JSON.parse(ultimaMensagem.content)
-        const insert = parsed[0]?.insert
-        if (insert?.image) urlArquivo = insert.image
-        if (insert?.document) urlArquivo = insert.document
-        if (insert?.audio) urlArquivo = insert.audio
-    } catch (e) {
-        logMsg("❌ Erro ao parsear content:", e.message)
-    }
-
-    if (!urlArquivo) {
-        logMsg("⚠️ Nenhum arquivo encontrado no content.")
         return
     }
 
@@ -88,18 +14,13 @@ Kinbox.on("conversation", async function (data) {
             nome: data.contact?.name,
             telefone: data.contact?.phone
         },
-        comprovante: {
-            url: urlArquivo,
-            tipo: ultimaMensagem.type,
-            criadoEm: ultimaMensagem.createdAt
-        },
         metadata: {
             conversaId,
             tags: data.conversation?.tags || []
         }
     }
 
-    logMsg("📤 Enviando payload para n8n...", payload)
+    logMsg("📤 Enviando payload (ID da conversa) para n8n...", payload)
 
     fetch("https://n8n.srv1025988.hstgr.cloud/webhook/kinbox/comprovantes", {
         method: "POST",
@@ -108,8 +29,4 @@ Kinbox.on("conversation", async function (data) {
     })
         .then(res => logMsg("🎯 Payload enviado com sucesso. Status: " + res.status))
         .catch(err => logMsg("❌ Erro ao enviar para o n8n: " + err.message))
-})
-
-Kinbox.on("no_conversation", function () {
-    logMsg("ℹ️ Nenhuma conversa ativa.")
 })
