@@ -18,7 +18,7 @@ async function getUltimaMensagem(conversationId) {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": "Bearer ak_live_NjEvp8gn2YAax4q11bzCq7yi0LyFX5vPXPAtcEV_DglI3fSoYk"
+                "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjM1ODA0IiwiaXNPd25lciI6dHJ1ZSwicm9sZUlkIjpudWxsLCJ2ZXJzaW9uIjpudWxsLCJzZXNzaW9uSWQiOiIzNTgwNC0xNzU4NzE3NTYxNzY2Iiwid29ya3NwYWNlSWQiOiI1MjE3IiwidmVyaWZpY2F0aW9uTGV2ZWwiOjIsImlzQWN0aXZlIjp0cnVlLCJ0eXBlIjowLCJpc01vYmlsZSI6ZmFsc2UsImlhdCI6MTc1ODcxNzU2MSwiZXhwIjoxNzkwMjUzNTYxfQ.l3-8ckeXY3GNBRAhdTM2icCgpH7O9f9IYKz1PMFnpQc"
             }
         })
         const data = await res.json()
