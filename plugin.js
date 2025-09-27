@@ -2,11 +2,12 @@ Kinbox.on("conversation", function (data) {
   logMsg("📩 Nova conversa recebida:", {
     contato: data.contact?.name,
     conversa: data.conversation?.id,
+    sessao: data.session?._id, // agora temos o id string correto
   })
 
-  const conversaId = data.conversation?.id
-  if (!conversaId) {
-    logMsg("⚠️ Nenhum ID de conversa encontrado.")
+  const sessaoId = data.session?._id
+  if (!sessaoId) {
+    logMsg("⚠️ Nenhum _id de sessão encontrado.")
     return
   }
 
@@ -18,12 +19,13 @@ Kinbox.on("conversation", function (data) {
       telefone: data.contact?.phone,
     },
     metadata: {
-      conversaId,
+      sessaoId, // string (MongoID)
+      conversaId: data.conversation?.id, // numérico (mantém para referência)
       tags: data.conversation?.tags || [],
     },
   }
 
-  logMsg("📤 Enviando ID da conversa para n8n...", payload)
+  logMsg("📤 Enviando ID da sessão para n8n...", payload)
 
   fetch("https://n8n.srv1025988.hstgr.cloud/webhook/kinbox/comprovantes", {
     method: "POST",
