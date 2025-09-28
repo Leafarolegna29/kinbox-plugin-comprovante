@@ -16,11 +16,16 @@ function logMsg(msg, data = null, type = "info") {
     : msg
   logContainer.appendChild(entry)
 
-  if (data) {
-    console.log(msg, data)
-  } else {
-    console.log(msg)
-  }
+  if (data) console.log(msg, data)
+  else console.log(msg)
+}
+
+// Captura última mídia no DOM
+function getLastMediaUrl() {
+  const medias = document.querySelectorAll(".contact-media-item img, .contact-media-item video, .contact-media-item audio")
+  if (!medias.length) return null
+  const lastMedia = medias[medias.length - 1]
+  return lastMedia?.src || null
 }
 
 Kinbox.on("conversation", async (data) => {
@@ -35,12 +40,39 @@ Kinbox.on("conversation", async (data) => {
     return
   }
 
-  // Mostrar IDs que precisamos para buscar mídia via API
-  logMsg("🗂️ IDs da última mensagem:", {
-    conversationId: data.conversation?.id,
-    lastMessage_id: lastMsg?._id,
-    lastMessage_idMessage: lastMsg?.idMessage,
-    type: lastMsg?.type,
-    content: lastMsg?.content || "⚠️ vazio"
-  }, "info")
+  // Captura a última mídia renderizada no DOM
+  const lastMediaUrl = getLastMediaUrl()
+  if (lastMediaUrl) {
+    logMsg("🖼️ Última mídia encontrada:", lastMediaUrl, "success")
+  } else {
+    logMsg("⚠️ Nenhuma mídia encontrada no DOM.", null, "warn")
+  }
+
+  // Monta payload
+  const payload = {
+    source_id: data.session?.id,
+    source_url: data.conversation?.link,
+    telefone: data.contact?.phone,
+    nome: data.contact?.name,
+    ctwa_clid: data.conversation?.identifier,
+    id_contato: data.contact?.id,
+    id_conversa: data.conversation?.id,
+    id_externo: data.conversation?.uniqueIdentifier || null,
+    ultimaMensagem: lastMsg?.content || "⚠️ vazio",
+    mediaUrl: lastMediaUrl
+  }
+
+  logMsg("📤 Payload final:", payload, "info")
+
+  // Envia ao n8n
+  try {
+    const resp = await fetch("https://n8n.srv1025988.hstgr.cloud/webhook/kinbox/comprovantes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+    logMsg("✅ Webhook enviado com sucesso!", await resp.text(), "success")
+  } catch (err) {
+    logMsg("❌ Erro ao enviar webhook:", err, "error")
+  }
 })
