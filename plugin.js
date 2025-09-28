@@ -1,83 +1,113 @@
-console.log("🚀 Iniciando plugin...")
+console.log("🔌 Plugin iniciado...");
 
-// Função de log no painel HTML
-function logMsg(msg, data = null, type = "info") {
-  const logContainer = document.getElementById("logs")
-  const entry = document.createElement("div")
+const WEBHOOK_URL = "https://n8n.srv1025988.hstgr.cloud/webhook/kinbox/comprovantes";
+const TOKEN = "ak_live_NjEvp8gn2YAax4q11bzCq7yi0LyFX5vPXPAtcEV_DglI3fSoYk";
 
-  let color = "#333"
-  if (type === "success") color = "green"
-  if (type === "error") color = "red"
-  if (type === "warn") color = "orange"
+// Extrai último comprovante (imagem/documento)
+function getLastComprovante(data) {
+  let mediaUrl = null;
 
-  entry.style.color = color
-  entry.style.margin = "8px 0"
-  entry.style.fontFamily = "monospace"
-  entry.style.whiteSpace = "pre-wrap"
-
-  let text = data ? `${msg}\n${JSON.stringify(data, null, 2)}` : msg
-  entry.textContent = text
-
-  logContainer.appendChild(entry)
-  console.log(msg, data || "")
-}
-
-// Captura última mídia visível no DOM
-function getLastMediaUrl() {
-  const medias = document.querySelectorAll(".contact-media-item img, .contact-media-item video, .contact-media-item audio")
-  if (!medias.length) return null
-  return medias[medias.length - 1]?.src || null
-}
-
-// Handler de eventos diretos do Kinbox (postMessage)
-window.addEventListener("message", async (event) => {
-  const payload = event.data
-  if (!payload || !payload.event) return
-
-  if (payload.event === "conversation") {
-    const data = payload.data
-    logMsg("📩 Nova conversa recebida:", {
-      contato: data.contact?.name,
-      conversa: data.conversation?.id
-    })
-
-    const tags = data.conversation?.tags || []
-    logMsg("🏷️ Tags recebidas:", tags)
-
-    const temTagComprovante = tags.some(t => String(t.id || t) === "41591")
-    if (!temTagComprovante) {
-      logMsg("ℹ️ Tag 'Aguardando comprovante' NÃO encontrada. Ignorando envio.", null, "warn")
-      return
+  try {
+    if (data.messages && Array.isArray(data.messages)) {
+      for (let i = data.messages.length - 1; i >= 0; i--) {
+        const msg = data.messages[i];
+        if (msg.type === "image" && msg.image?.url) {
+          mediaUrl = msg.image.url;
+          break;
+        }
+        if (msg.type === "document" && msg.document?.url) {
+          mediaUrl = msg.document.url;
+          break;
+        }
+      }
     }
-
-    logMsg("✅ Tag 'Aguardando comprovante' encontrada. Prosseguindo...", null, "success")
-
-    const lastMediaUrl = getLastMediaUrl()
-
-    const payloadWebhook = {
-      source_id: data.session?.id,
-      source_url: data.conversation?.link,
-      telefone: data.contact?.phone,
-      nome: data.contact?.name,
-      ctwa_clid: data.conversation?.identifier,
-      id_contato: data.contact?.id,
-      id_conversa: data.conversation?.id,
-      id_externo: data.conversation?.uniqueIdentifier || null,
-      ultimaMensagem: data.conversation?.lastMessage?.content || "⚠️ vazio",
-      mediaUrl: lastMediaUrl
+    if (!mediaUrl && data.contact?.customFields?.last_comprovante?.value) {
+      mediaUrl = data.contact.customFields.last_comprovante.value;
     }
-
-    logMsg("📤 Payload final:", payloadWebhook)
-
-    try {
-      const resp = await fetch("https://n8n.srv1025988.hstgr.cloud/webhook/kinbox/comprovantes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payloadWebhook)
-      })
-      logMsg("✅ Webhook enviado com sucesso!", await resp.text(), "success")
-    } catch (err) {
-      logMsg("❌ Erro ao enviar webhook:", err, "error")
-    }
+  } catch (err) {
+    console.error("❌ Erro ao extrair comprovante:", err);
   }
-})
+
+  return mediaUrl;
+}
+
+// Extrai dados do referral (Meta Ads)
+function getReferralData(data) {
+  let referral = {};
+
+  try {
+    if (data.messages && Array.isArray(data.messages)) {
+      for (let i = data.messages.length - 1; i >= 0; i--) {
+        const msg = data.messages[i];
+        if (msg.referral) {
+          referral = {
+            ctwa_clid: msg.referral.ctwa_clid || null,
+            source_id: msg.referral.source_id || null,
+            source_url: msg.referral.source_url || null,
+            external_id: msg.referral.external_id || null
+          };
+          break;
+        }
+      }
+    }
+  } catch (err) {
+    console.error("❌ Erro ao extrair referral:", err);
+  }
+
+  return referral;
+}
+
+Kinbox.on("conversation", async (data) => {
+  console.log("📩 Nova conversa recebida:", {
+    contato: data.contact?.name,
+    conversa: data.conversation?.id
+  });
+
+  const tags = data.conversation?.tags || [];
+  console.log("🏷️ Tags recebidas:", tags);
+
+  const hasComprovanteTag = tags.some(t => t.id?.toString() === "41591");
+  if (!hasComprovanteTag) {
+    console.log("ℹ️ Tag 'Aguardando comprovante' NÃO encontrada. Ignorando envio.");
+    return;
+  }
+
+  console.log("✅ Tag 'Aguardando comprovante' encontrada. Prosseguindo...");
+
+  // Extrair dados principais
+  const phone = data.contact?.phone || null;
+  const deal_id = data.deals ? Object.keys(data.deals)[0] : null;
+  const link_comprovante = getLastComprovante(data);
+  const referral = getReferralData(data);
+
+  const payload = {
+    phone,
+    ctwa_clid: referral.ctwa_clid,
+    source_id: referral.source_id,
+    source_url: referral.source_url,
+    external_id: referral.external_id,
+    deal_id,
+    link_comprovante
+  };
+
+  console.log("📤 Payload final:", payload);
+
+  try {
+    const res = await fetch(WEBHOOK_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${TOKEN}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      console.log("✅ Webhook enviado com sucesso!");
+    } else {
+      console.error("❌ Erro ao enviar webhook:", res.status, await res.text());
+    }
+  } catch (err) {
+    console.error("❌ Falha na requisição do webhook:", err);
+  }
+});
