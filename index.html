@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Plugin Kinbox</title>
+  <title>Plugin Kinbox - Dump Recursivo</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -13,16 +13,17 @@
       background: #fff;
       border: 1px solid #ddd;
       padding: 10px;
-      height: 400px;
+      height: 500px;
       overflow-y: auto;
       font-family: monospace;
       font-size: 13px;
+      white-space: pre-wrap;
     }
   </style>
 </head>
 <body>
-  <h2>📡 Plugin Kinbox – Monitor de Comprovantes</h2>
-  <p>Logs abaixo (atualizados em tempo real):</p>
+  <h2>📡 Plugin Kinbox – Dump Recursivo de lastMessage</h2>
+  <p>Todos os campos da última mensagem serão listados abaixo, inclusive os de mídia:</p>
   <div id="logs"></div>
   <script src="plugin.js"></script>
 </body>
