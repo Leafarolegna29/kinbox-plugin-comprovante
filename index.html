@@ -23,6 +23,10 @@
       max-width: 250px;
       display: block;
     }
+    .warn {
+      color: orange;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -35,6 +39,25 @@
     const script = document.createElement("script");
     script.src = "plugin.js?v=" + new Date().getTime();
     document.body.appendChild(script);
+
+    // ⏳ Timeout para verificar se eventos chegaram
+    let eventReceived = false;
+
+    window.addEventListener("message", (event) => {
+      if (event.data?.event === "conversation") {
+        eventReceived = true;
+      }
+    });
+
+    setTimeout(() => {
+      if (!eventReceived) {
+        const logContainer = document.getElementById("logs");
+        const warnMsg = document.createElement("div");
+        warnMsg.className = "warn";
+        warnMsg.textContent = "⚠️ Nenhum evento recebido do Kinbox nos últimos 10s.\nVerifique se o plugin está configurado corretamente.";
+        logContainer.appendChild(warnMsg);
+      }
+    }, 10000);
   </script>
 </body>
 </html>
