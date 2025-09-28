@@ -1,6 +1,5 @@
 console.log("Iniciando plugin...")
 
-// Função para logar no painel HTML + console
 function logMsg(msg, data = null, type = "info") {
   const logContainer = document.getElementById("logs")
   const entry = document.createElement("pre")
@@ -24,23 +23,6 @@ function logMsg(msg, data = null, type = "info") {
   }
 }
 
-// Função recursiva para varrer objetos
-function dumpObject(obj, prefix = "") {
-  let result = {}
-  for (const key in obj) {
-    if (!obj.hasOwnProperty(key)) continue
-    const value = obj[key]
-    if (typeof value === "object" && value !== null) {
-      result[prefix + key] = "[Object]"
-      Object.assign(result, dumpObject(value, prefix + key + "."))
-    } else {
-      result[prefix + key] = value
-    }
-  }
-  return result
-}
-
-// Listener de conversas
 Kinbox.on("conversation", async (data) => {
   logMsg("📩 Nova conversa recebida:", {
     contato: data.contact?.name,
@@ -53,10 +35,12 @@ Kinbox.on("conversation", async (data) => {
     return
   }
 
-  // Dump direto da lastMessage
-  logMsg("🗂️ Dump bruto de lastMessage:", lastMsg, "info")
-
-  // Dump recursivo detalhado (inclui subníveis)
-  const fullDump = dumpObject(lastMsg)
-  logMsg("🔎 Dump recursivo de todos os campos de lastMessage:", fullDump, "success")
+  // Mostrar IDs que precisamos para buscar mídia via API
+  logMsg("🗂️ IDs da última mensagem:", {
+    conversationId: data.conversation?.id,
+    lastMessage_id: lastMsg?._id,
+    lastMessage_idMessage: lastMsg?.idMessage,
+    type: lastMsg?.type,
+    content: lastMsg?.content || "⚠️ vazio"
+  }, "info")
 })
