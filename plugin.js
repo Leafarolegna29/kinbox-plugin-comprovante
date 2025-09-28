@@ -1,8 +1,8 @@
 console.log("Iniciando plugin...")
 
-function logMsg(msg, data = null, type = "info") {
+function logMsg(msg, data = null, type = "info", mediaPreview = null) {
   const logContainer = document.getElementById("logs")
-  const entry = document.createElement("pre")
+  const entry = document.createElement("div")
 
   let color = "#333"
   if (type === "success") color = "green"
@@ -10,14 +10,29 @@ function logMsg(msg, data = null, type = "info") {
   if (type === "warn") color = "orange"
 
   entry.style.color = color
-  entry.style.margin = "5px 0"
-  entry.textContent = data
-    ? `${msg}\n${JSON.stringify(data, null, 2)}`
-    : msg
-  logContainer.appendChild(entry)
+  entry.style.margin = "8px 0"
+  entry.style.fontFamily = "monospace"
+  entry.style.whiteSpace = "pre-wrap"
 
-  if (data) console.log(msg, data)
-  else console.log(msg)
+  // Texto principal
+  let text = data ? `${msg}\n${JSON.stringify(data, null, 2)}` : msg
+  entry.textContent = text
+
+  // Se tiver preview de imagem, adiciona
+  if (mediaPreview) {
+    const img = document.createElement("img")
+    img.src = mediaPreview
+    img.alt = "Preview Comprovante"
+    img.style.display = "block"
+    img.style.marginTop = "5px"
+    img.style.maxWidth = "250px"
+    img.style.border = "1px solid #ccc"
+    img.style.borderRadius = "8px"
+    logContainer.appendChild(img)
+  }
+
+  logContainer.appendChild(entry)
+  console.log(msg, data || "")
 }
 
 // Captura última mídia renderizada no DOM
@@ -52,7 +67,8 @@ Kinbox.on("conversation", async (data) => {
   const lastMediaUrl = getLastMediaUrl()
 
   if (lastMediaUrl) {
-    logMsg("🖼️ Última mídia encontrada:", lastMediaUrl, "success")
+    const isImage = lastMediaUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+    logMsg("🖼️ Última mídia encontrada:", lastMediaUrl, "success", isImage ? lastMediaUrl : null)
   } else {
     logMsg("⚠️ Nenhuma mídia encontrada no DOM.", null, "warn")
   }
