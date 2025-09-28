@@ -29,6 +29,12 @@
   <h2>📡 Plugin Kinbox – Captura Última Mídia</h2>
   <p>Somente ativa quando a tag <b>Aguardando comprovante</b> (ID: 41591) estiver presente.</p>
   <div id="logs"></div>
-  <script src="plugin.js"></script>
+
+  <script>
+    // 🔥 Cache-buster automático
+    const script = document.createElement("script");
+    script.src = "plugin.js?v=" + new Date().getTime();
+    document.body.appendChild(script);
+  </script>
 </body>
 </html>
