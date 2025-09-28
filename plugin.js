@@ -3,6 +3,15 @@ console.log("🔌 Plugin iniciado...");
 const WEBHOOK_URL = "https://n8n.srv1025988.hstgr.cloud/webhook/kinbox/comprovantes";
 const TOKEN = "ak_live_NjEvp8gn2YAax4q11bzCq7yi0LyFX5vPXPAtcEV_DglI3fSoYk";
 
+// Utilitário para logar no painel HTML
+function logToPanel(msg, data) {
+  const panel = document.getElementById("log-panel");
+  const entry = document.createElement("pre");
+  entry.textContent = msg + (data ? " " + JSON.stringify(data, null, 2) : "");
+  panel.appendChild(entry);
+  panel.scrollTop = panel.scrollHeight;
+}
+
 // Extrai último comprovante (imagem/documento)
 function getLastComprovante(data) {
   let mediaUrl = null;
@@ -26,6 +35,7 @@ function getLastComprovante(data) {
     }
   } catch (err) {
     console.error("❌ Erro ao extrair comprovante:", err);
+    logToPanel("❌ Erro ao extrair comprovante:", err);
   }
 
   return mediaUrl;
@@ -52,6 +62,7 @@ function getReferralData(data) {
     }
   } catch (err) {
     console.error("❌ Erro ao extrair referral:", err);
+    logToPanel("❌ Erro ao extrair referral:", err);
   }
 
   return referral;
@@ -62,17 +73,24 @@ Kinbox.on("conversation", async (data) => {
     contato: data.contact?.name,
     conversa: data.conversation?.id
   });
+  logToPanel("📩 Nova conversa recebida:", {
+    contato: data.contact?.name,
+    conversa: data.conversation?.id
+  });
 
   const tags = data.conversation?.tags || [];
   console.log("🏷️ Tags recebidas:", tags);
+  logToPanel("🏷️ Tags recebidas:", tags);
 
   const hasComprovanteTag = tags.some(t => t.id?.toString() === "41591");
   if (!hasComprovanteTag) {
     console.log("ℹ️ Tag 'Aguardando comprovante' NÃO encontrada. Ignorando envio.");
+    logToPanel("ℹ️ Tag 'Aguardando comprovante' NÃO encontrada. Ignorando envio.");
     return;
   }
 
   console.log("✅ Tag 'Aguardando comprovante' encontrada. Prosseguindo...");
+  logToPanel("✅ Tag 'Aguardando comprovante' encontrada. Prosseguindo...");
 
   // Extrair dados principais
   const phone = data.contact?.phone || null;
@@ -91,6 +109,7 @@ Kinbox.on("conversation", async (data) => {
   };
 
   console.log("📤 Payload final:", payload);
+  logToPanel("📤 Payload final:", payload);
 
   try {
     const res = await fetch(WEBHOOK_URL, {
@@ -104,10 +123,14 @@ Kinbox.on("conversation", async (data) => {
 
     if (res.ok) {
       console.log("✅ Webhook enviado com sucesso!");
+      logToPanel("✅ Webhook enviado com sucesso!");
     } else {
-      console.error("❌ Erro ao enviar webhook:", res.status, await res.text());
+      const errText = await res.text();
+      console.error("❌ Erro ao enviar webhook:", res.status, errText);
+      logToPanel("❌ Erro ao enviar webhook:", { status: res.status, errText });
     }
   } catch (err) {
     console.error("❌ Falha na requisição do webhook:", err);
+    logToPanel("❌ Falha na requisição do webhook:", err);
   }
 });
