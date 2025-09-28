@@ -20,9 +20,11 @@ function logMsg(msg, data = null, type = "info") {
   else console.log(msg)
 }
 
-// Captura última mídia no DOM
+// Captura última mídia renderizada no DOM
 function getLastMediaUrl() {
-  const medias = document.querySelectorAll(".contact-media-item img, .contact-media-item video, .contact-media-item audio")
+  const medias = document.querySelectorAll(
+    ".contact-media-item img, .contact-media-item video, .contact-media-item audio"
+  )
   if (!medias.length) return null
   const lastMedia = medias[medias.length - 1]
   return lastMedia?.src || null
@@ -34,21 +36,28 @@ Kinbox.on("conversation", async (data) => {
     conversa: data.conversation?.id
   }, "info")
 
-  const lastMsg = data.conversation?.lastMessage
-  if (!lastMsg) {
-    logMsg("⚠️ Nenhuma lastMessage encontrada", null, "warn")
+  const tags = data.conversation?.tags || []
+  logMsg("🏷️ Tags recebidas:", tags, "info")
+
+  // Verifica se a tag "Aguardando comprovante" (ID 41591) está presente
+  const temTagComprovante = tags.some(t => String(t.id || t) === "41591")
+  if (!temTagComprovante) {
+    logMsg("ℹ️ Tag 'Aguardando comprovante' NÃO encontrada. Ignorando envio.", null, "warn")
     return
   }
 
-  // Captura a última mídia renderizada no DOM
+  logMsg("✅ Tag 'Aguardando comprovante' encontrada. Prosseguindo...", null, "success")
+
+  const lastMsg = data.conversation?.lastMessage || {}
   const lastMediaUrl = getLastMediaUrl()
+
   if (lastMediaUrl) {
     logMsg("🖼️ Última mídia encontrada:", lastMediaUrl, "success")
   } else {
     logMsg("⚠️ Nenhuma mídia encontrada no DOM.", null, "warn")
   }
 
-  // Monta payload
+  // Monta payload completo
   const payload = {
     source_id: data.session?.id,
     source_url: data.conversation?.link,
