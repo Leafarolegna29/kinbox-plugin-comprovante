@@ -1,61 +1,29 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="utf-8" />
-    <title>Plugin Comprovante Kinbox</title>
-
-    <!-- SDK oficial do Kinbox -->
-    <script
-      type="text/javascript"
-      src="https://andrody.github.io/kinbox-lib/kinboxjs.js"
-    ></script>
-
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        background: #111;
-        color: #0f0;
-        padding: 10px;
-      }
-      h2 {
-        color: #0ff;
-      }
-      #log {
-        white-space: pre-wrap;
-        font-size: 14px;
-        line-height: 1.4em;
-        background: #000;
-        padding: 10px;
-        border-radius: 8px;
-        max-height: 500px;
-        overflow-y: auto;
-      }
-      .success {
-        color: #00ff7f;
-        font-weight: bold;
-      }
-    </style>
-  </head>
-  <body>
-    <h2>📡 Plugin de Captura de Comprovantes</h2>
-    <div id="log">Iniciando plugin...</div>
-
-    <!-- Função global de log -->
-    <script type="text/javascript">
-      function logMsg(msg, obj, success = false) {
-        console.log(msg, obj || "")
-        const logDiv = document.getElementById("log")
-        if (logDiv) {
-          const span = document.createElement("div")
-          span.innerText = msg + (obj ? " " + JSON.stringify(obj, null, 2) : "")
-          if (success) span.classList.add("success")
-          logDiv.appendChild(span)
-          logDiv.scrollTop = logDiv.scrollHeight
-        }
-      }
-    </script>
-
-    <!-- Importa o plugin -->
-    <script type="text/javascript" src="plugin.js"></script>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <title>Plugin Kinbox</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      padding: 15px;
+    }
+    #logs {
+      background: #fff;
+      border: 1px solid #ddd;
+      padding: 10px;
+      height: 400px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <h2>📡 Plugin Kinbox – Monitor de Comprovantes</h2>
+  <p>Logs abaixo (atualizados em tempo real):</p>
+  <div id="logs"></div>
+  <script src="plugin.js"></script>
+</body>
 </html>
