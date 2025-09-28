@@ -1,104 +1,104 @@
-// Mapa fixo das tags conhecidas
-const TAGS_MAP = {
-  "41591": "Aguardando comprovante"
+console.log("Iniciando plugin...")
+
+// ID fixo da tag "Aguardando comprovante"
+const TAG_COMPROVANTE_ID = "41591"
+
+// URL do webhook n8n
+const N8N_WEBHOOK_URL = "https://n8n.srv1025988.hstgr.cloud/webhook/kinbox/comprovantes"
+
+// Função de log (console + tela)
+function logMsg(msg, data = null, type = "info") {
+  const logContainer = document.getElementById("logs")
+  const entry = document.createElement("div")
+
+  // Cores do log
+  let color = "#333"
+  if (type === "success") color = "green"
+  if (type === "error") color = "red"
+  if (type === "warn") color = "orange"
+
+  entry.style.color = color
+  entry.style.margin = "3px 0"
+  entry.textContent = data ? `${msg} ${JSON.stringify(data, null, 2)}` : msg
+  logContainer.appendChild(entry)
+
+  // Também manda pro console
+  if (data) {
+    console.log(msg, data)
+  } else {
+    console.log(msg)
+  }
 }
 
-Kinbox.on("conversation", function (data) {
+// Listener de conversas
+Kinbox.on("conversation", async (data) => {
   logMsg("📩 Nova conversa recebida:", {
     contato: data.contact?.name,
     conversa: data.conversation?.id
   })
 
-  const conversaId = data.conversation?.id
+  // Captura tags
   const tags = data.conversation?.tags || []
+  logMsg("🏷️ Tags recebidas:", tags)
 
-  logMsg("🏷️ Tags recebidas (cruas):", tags)
-
-  // Verificação de tags usando ID + nome do mapa
+  // Verificação de tag "Aguardando comprovante" pelo ID fixo
   const temTagComprovante = tags.some(t => {
-    const tagId = String(t.id || t) // pode vir como objeto ou id direto
-    const nome = (t.name || TAGS_MAP[tagId] || "").toLowerCase()
-    return nome.includes("comprovante")
+    const tagId = String(t.id || t) // Pode vir como objeto {id} ou apenas número
+    return tagId === TAG_COMPROVANTE_ID
   })
 
   if (!temTagComprovante) {
-    logMsg("ℹ️ Nenhuma tag de comprovante encontrada.")
+    logMsg("ℹ️ Nenhuma tag de comprovante encontrada.", null, "warn")
     return
   }
 
-  const ultimaMensagem = data.conversation?.lastMessage
-  if (!ultimaMensagem) {
-    logMsg("⚠️ Nenhuma última mensagem disponível.")
-    return
-  }
+  logMsg("✅ Tag de comprovante detectada!", null, "success")
 
+  // Última mensagem (pode ser texto ou mídia)
+  let ultimaMensagem = data.conversation?.lastMessage?.content || "⚠️ Sem mensagem"
   let mediaUrl = null
-  let mensagemTexto = null
 
-  // 1) tenta pelo content
   try {
-    if (ultimaMensagem.content) {
-      const parsed = JSON.parse(ultimaMensagem.content)
-      const insert = parsed[0]?.insert
-      if (insert?.image) mediaUrl = insert.image
-      if (insert?.document) mediaUrl = insert.document
-      if (insert?.audio) mediaUrl = insert.audio
-      if (typeof insert === "string") mensagemTexto = insert
+    if (data.conversation?.lastMessage?.type === 3) {
+      // Se for mídia
+      mediaUrl = data.conversation?.lastMessage?.mediaUrl || data.conversation?.lastMessage?.extra?.mediaUrl
+    } else if (ultimaMensagem && typeof ultimaMensagem === "string") {
+      const parsed = JSON.parse(ultimaMensagem)
+      if (Array.isArray(parsed) && parsed[0]?.insert?.image) {
+        mediaUrl = parsed[0].insert.image
+      }
     }
   } catch (e) {
-    logMsg("❌ Erro ao tentar ler content: " + e.message)
+    logMsg("⚠️ Erro ao processar última mensagem:", e, "error")
   }
 
-  // 2) fallback pelo campo direto
-  if (!mediaUrl && ultimaMensagem.mediaUrl) {
-    mediaUrl = ultimaMensagem.mediaUrl
-  }
+  logMsg("🖼️ Última mensagem capturada:", ultimaMensagem)
+  if (mediaUrl) logMsg("🔗 URL da mídia:", mediaUrl, "success")
 
-  // 3) fallback pelo campo extra
-  if (!mediaUrl && ultimaMensagem.extra?.mediaUrl) {
-    mediaUrl = ultimaMensagem.extra.mediaUrl
-  }
-
-  if (mediaUrl) {
-    logMsg("✅ Comprovante detectado: " + mediaUrl, null, true)
-  } else {
-    logMsg("⚠️ Nenhum comprovante (mídia) detectado nesta mensagem.")
-  }
-
+  // Monta payload para enviar ao n8n
   const payload = {
-    token: "ak_live_NjEvp8gn2YAax4q11bzCq7yi0LyFX5vPXPAtcEV_DglI3fSoYk",
-    contato: {
-      id_contato: data.contact?.id,
-      nome: data.contact?.name,
-      telefone: data.contact?.phone,
-    },
-    metadata: {
-      id_conversa: conversaId,
-      id_externo: data.conversation?.identifier,
-      source_id: data.conversation?.platformId || null,
-      source_url: data.conversation?.link || null,
-      ctwa_clid: data.conversation?.referral || null,
-      tags,
-      comprovante: mediaUrl,
-      mensagemTexto
-    },
+    source_id: data.session?.id,
+    source_url: data.conversation?.link,
+    telefone: data.contact?.phone,
+    nome: data.contact?.name,
+    ctwa_clid: data.conversation?.identifier,
+    id_contato: data.contact?.id,
+    id_conversa: data.conversation?.id,
+    id_externo: data.conversation?.uniqueIdentifier || null,
+    ultimaMensagem,
+    mediaUrl
   }
 
-  logMsg("📤 Enviando payload para n8n...", payload)
+  logMsg("📤 Enviando payload ao n8n:", payload, "info")
 
-  fetch("https://n8n.srv1025988.hstgr.cloud/webhook/kinbox/comprovantes", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  })
-    .then((res) =>
-      logMsg("🎯 Payload enviado com sucesso. Status: " + res.status)
-    )
-    .catch((err) =>
-      logMsg("❌ Erro ao enviar para o n8n: " + err.message)
-    )
-})
-
-Kinbox.on("no_conversation", function () {
-  logMsg("ℹ️ Nenhuma conversa ativa.")
+  try {
+    const resp = await fetch(N8N_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+    logMsg("✅ Webhook enviado com sucesso!", await resp.text(), "success")
+  } catch (err) {
+    logMsg("❌ Erro ao enviar webhook:", err, "error")
+  }
 })
